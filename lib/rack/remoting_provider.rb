@@ -1,6 +1,6 @@
 
 class Rails::ExtJS::Direct::RemotingProvider
-    def initialize(app, rpath)
+    def initialize(app, rpath,options={})
         if app.kind_of?(String)
           @controllers = {}
           @type = app
@@ -8,10 +8,18 @@ class Rails::ExtJS::Direct::RemotingProvider
           @app = app
         end
         @router_path = rpath
+        ns=options[:namespace]
+        if(ns)
+          ns=ns.to_s
+          ns="/#{ns}" unless ns=~/^\//
+        else
+          ns=""
+        end
+      @namespace=ns
     end
 
     def add_controller(controller_name)
-      @controllers[controller_name.capitalize] = "#{controller_name.capitalize}Controller".constantize.get_direct_actions
+      @controllers[controller_name.capitalize] = "#{@namespace}#{controller_name.capitalize}Controller".constantize.get_direct_actions
     end
 
     def render
@@ -34,12 +42,15 @@ class Rails::ExtJS::Direct::RemotingProvider
               request_env = env.dup
 
               # pop poorly-named Ext.Direct routing-params off.
-              controller = req.delete("action").downcase
+              controller = req.delete("action").underscore.pluralize
               action =  req.delete("method")
 
               # set env URI and PATH_INFO for each request
-              request_env["PATH_INFO"] = "/#{controller}/#{action}"
-              request_env["REQUEST_URI"] = "/#{controller}/#{action}"
+              request_env["PATH_INFO"] = "#{@namespace}/#{controller}/#{action}"
+              request_env["REQUEST_URI"] = "#{@namespace}/#{controller}/#{action}"
+
+
+
 
               # set request params
               request_env[params_key] = req
